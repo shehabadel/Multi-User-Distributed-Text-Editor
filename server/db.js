@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const connect = () => {
     //Replace the database URI with process.env.DB_URL
     //Which must be the MongoDB replicaSet URI
-    const dbURL = "mongodb://localhost/multi-user-db"
+    const dbURL = process.env.DB_URL
     mongoose.connect(dbURL, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
