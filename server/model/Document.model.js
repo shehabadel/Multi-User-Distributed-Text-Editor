@@ -1,12 +1,16 @@
 const { Schema, model } = require("mongoose")
+const { UsersSchema } = require("./User.model")
 
-const Document = new Schema({
+const DocumentSchema = new Schema({
     _id: String,
     data: Object,
-    dateCreated: {type:Date, default:Date.now},
+    dateCreated: { type: Date, default: Date.now },
+    users: [UsersSchema]
 })
 
-module.exports = model("Document", Document)
+module.exports = model("Document", DocumentSchema)
+
+
 
 
 //TODO: Add lastUpdatedAt function whenever the document has no active users ??
