@@ -5,6 +5,8 @@ const dbConnect = require('./db').connect;
 const { Server } = require('socket.io');
 const Document = require('./model/Document.model');
 
+const { createClient } = require('redis');
+const { createAdapter } = require('@socket.io/redis-adapter');
 
 //Connecting to the MongoDB database using 
 dbConnect()
@@ -26,6 +28,29 @@ const io = new Server(process.env.PORT, {
         methods: ["GET", "POST"]
     }
 })
+
+
+//Initilizaed Publisher and Subscriber Redis Clients in order
+//To subscribe to a single channel so that all websockets servers
+//Can be connected to each other using it.
+const pubClient = createClient({ url: "redis://localhost:6379" });
+const subClient = pubClient.duplicate();
+pubClient.on('ready', () => {
+    console.log('Publisher connected to redis and ready to use')
+})
+subClient.on('ready', () => {
+    console.log('Subscriber connected to redis and ready to use')
+})
+pubClient.on('error', (err) => console.log('Publisher Client Error', err));
+subClient.on('error', (err) => console.log('Subscriber Client Error', err));
+
+Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+    //Connecting the socket server to the redis channel
+    //using Socket.io Redis-Adapter
+    io.adapter(createAdapter(pubClient, subClient));
+});
+
+
 
 //default value that is added to the document
 //whenever we create a new document to be added
