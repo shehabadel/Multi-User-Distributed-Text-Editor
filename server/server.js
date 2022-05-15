@@ -33,22 +33,6 @@ const io = new Server(process.env.PORT, {
 //Initilizaed Publisher and Subscriber Redis Clients in order
 //To subscribe to a single channel so that all websockets servers
 //Can be connected to each other using it.
-const pubClient = createClient({ url: "redis://localhost:6379" });
-const subClient = pubClient.duplicate();
-pubClient.on('ready', () => {
-    console.log('Publisher connected to redis and ready to use')
-})
-subClient.on('ready', () => {
-    console.log('Subscriber connected to redis and ready to use')
-})
-pubClient.on('error', (err) => console.log('Publisher Client Error', err));
-subClient.on('error', (err) => console.log('Subscriber Client Error', err));
-
-Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-    //Connecting the socket server to the redis channel
-    //using Socket.io Redis-Adapter
-    io.adapter(createAdapter(pubClient, subClient));
-});
 
 
 
@@ -57,38 +41,99 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
 //to the database.
 const defaultValue = ""
 
+
+
 //Array contains all sockets that establish the connections
 //with the server in order to keep track of number of clients
 //connected and number of clients disconnected
 var allClients = [];
+var redisPub = []
+var redisSub = []
+/**
+ *  host: 'redis-19032.c55.eu-central-1-1.ec2.cloud.redislabs.com',
+    port:19032,
+    auth:'kyhTF1zQ5VO2Xqj3Ruo62qHgZoMhFLOu'
+ */
 
+var pubClient = createClient({
+    url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
+});
+pubClient.on('ready', () => {
+    console.log('Publisher connected to redis and ready to use')
+})
+pubClient.on('error', (err) => console.log('Publisher Client Error', err));
+
+Promise.all([pubClient.connect()]).then(() => {
+    redisPub.push(pubClient)
+    console.log(`number of publishers is ${redisPub.length}`)
+})
 //Creating event listener for connection event
 //That is listened to whenever a client establishes
 //A connection with the server
-io.on("connection", (socket) => {
-    allClients.push(socket)
 
+io.on("connection", (socket) => {
+
+    const subClient = pubClient.duplicate();
+    subClient.on('ready', () => {
+        console.log('Subscriber connected to redis and ready to use')
+    })
+    subClient.on('error', (err) => console.log('Subscriber Client Error', err));
+
+    Promise.all([subClient.connect()]).then(() => {
+        //Connecting the socket server to the redis channel
+        //using Socket.io Redis-Adapter
+        console.log(`A Subscriber clients connected ${username}`)
+        redisSub.push(subClient);
+        console.log(`number of subscribers is ${redisSub.length}`)
+    });
+
+    //Whenever a client connects to a server
+    //We fetch his username from the handshake.query
+    //and log it
+    allClients.push(socket)
     var username = socket.handshake.query.username
     console.log(`A client is connected! ${username} - Number of sockets is: ${allClients.length}`)
-    //TODO: if the client disconnects due to network error block the editing process and show a `RECONNECTING...' popup 
+
+
+    //TODO: if the client disconnects due to network error block the editing process and show a `RECONNECTING...' popup
 
     //Event listener for client's socket disconnect
     //Event that listens to any
     socket.on('disconnect', function (reason) {
+        //Unsubscribe from the redis channel
         console.log(`${username} got disconnected due to ${reason}`)
         var i = allClients.indexOf(socket);
         allClients.splice(i, 1);
         console.log(`Number of sockets now is: ${allClients.length}`)
+        var pubI = redisPub.indexOf(pubClient);
+        var subI = redisSub.indexOf(subClient)
+        redisPub.splice(pubI, 1)
+        redisSub.splice(subI, 1)
     })
 
 
     socket.on('get-document', async (documentID) => {
+        try {
+            //when receiving as a subscriber pare the data sent by the publisher to return to its form
+            await subClient.subscribe(documentID, (delta) => {
+                console.log(`${username} subscribed ${delta}`)
+            })
+        } catch (error) {
+            console.error(error)
+        }
         const document = await lookUpDocument(documentID);
         //TODO subscribe the socket to redis channel using the documentID
         socket.join(documentID);
-        socket.emit("load-document", document.data);
-        socket.on("send-changes", (delta) => {
-            socket.broadcast.to(documentID).emit("receive-changes", delta)
+        socket.emit("load-document", document.data); //on load/reload
+        socket.on("send-changes", async (delta) => {
+            //Change delta to string when publishing
+            socket.to(documentID).emit("receive-changes", delta)
+            try {
+                await pubClient.publish(documentID, JSON.stringify(delta))
+                console.log(`${username} published`)
+            } catch (error) {
+                console.error(error)
+            }
         })
 
         socket.on("save-document", async (data) => {
@@ -103,7 +148,6 @@ io.on("connection", (socket) => {
 
     })
 })
-
 
 async function lookUpDocument(id) {
     if (id == null) return

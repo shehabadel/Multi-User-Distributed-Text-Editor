@@ -4,10 +4,7 @@ const connect = () => {
     //Replace the database URI with process.env.DB_URL
     //Which must be the MongoDB replicaSet URI
     const dbURL = process.env.DB_URL
-    mongoose.connect(dbURL, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    })
+    mongoose.connect(dbURL)
     console.log(`Connected to database successfully ${dbURL}`)
 }
 
