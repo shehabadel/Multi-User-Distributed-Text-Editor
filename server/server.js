@@ -98,7 +98,7 @@ io.on("connection", (socket) => {
 
     //Event listener for client's socket disconnect
     //Event that listens to any
-    socket.on('disconnect', function (reason) {
+    socket.on('disconnect', async function (reason) {
         //Unsubscribe from the redis channel
         console.log(`${username} got disconnected due to ${reason}`)
         var i = allClients.indexOf(socket);
@@ -106,6 +106,9 @@ io.on("connection", (socket) => {
         console.log(`Number of sockets now is: ${allClients.length}`)
         var subI = redisSub.indexOf(subClient)
         redisSub.splice(subI, 1)
+        //Unsubscribe from all the channels
+        await subClient.unsubscribe()
+        await subClient.quit()
     })
 
 
