@@ -30,10 +30,6 @@ const io = new Server(process.env.PORT, {
 })
 
 
-//Initilizaed Publisher and Subscriber Redis Clients in order
-//To subscribe to a single channel so that all websockets servers
-//Can be connected to each other using it.
-
 
 
 //default value that is added to the document
@@ -55,6 +51,9 @@ var redisSub = []
     auth:'kyhTF1zQ5VO2Xqj3Ruo62qHgZoMhFLOu'
  */
 
+//Initilizaed Publisher and Subscriber Redis Clients in order
+//To subscribe to a single channel so that all websockets servers
+//Can be connected to each other using it.
 var pubClient = createClient({
     url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
 });
@@ -105,9 +104,7 @@ io.on("connection", (socket) => {
         var i = allClients.indexOf(socket);
         allClients.splice(i, 1);
         console.log(`Number of sockets now is: ${allClients.length}`)
-        var pubI = redisPub.indexOf(pubClient);
         var subI = redisSub.indexOf(subClient)
-        redisPub.splice(pubI, 1)
         redisSub.splice(subI, 1)
     })
 
@@ -115,8 +112,14 @@ io.on("connection", (socket) => {
     socket.on('get-document', async (documentID) => {
         try {
             //when receiving as a subscriber pare the data sent by the publisher to return to its form
-            await subClient.subscribe(documentID, (delta) => {
-                console.log(`${username} subscribed ${delta}`)
+            await subClient.subscribe(documentID, (message) => {
+                const msg = JSON.parse(message)
+                console.log(msg.sender)
+                console.log(msg.data)
+                console.log(username)
+                if (socket.id !== msg.sender) {
+                    socket.emit('receive-changes', msg.data)
+                }
             })
         } catch (error) {
             console.error(error)
@@ -127,9 +130,14 @@ io.on("connection", (socket) => {
         socket.emit("load-document", document.data); //on load/reload
         socket.on("send-changes", async (delta) => {
             //Change delta to string when publishing
-            socket.to(documentID).emit("receive-changes", delta)
+            //socket.to(documentID).emit("receive-changes", delta)
             try {
-                await pubClient.publish(documentID, JSON.stringify(delta))
+                const message = {
+                    'sender': socket.id,
+                    'data': delta
+                }
+                const sentMsg = JSON.stringify(message)
+                await pubClient.publish(documentID, sentMsg)
                 console.log(`${username} published`)
             } catch (error) {
                 console.error(error)
@@ -158,3 +166,18 @@ async function lookUpDocument(id) {
 }
 
 
+/**
+ *  try {
+            await io.of('/').adapter.remoteJoin(socket.id, documentID);
+            const sockets = await io.in(documentID).allSockets();
+            console.log(`sockets in ${documentID} are: `)
+            console.log(sockets)
+
+            const rooms = await io.of('/').adapter.allRooms();
+            console.log(`Rooms are : `)
+            console.log(rooms)
+          } catch (e) {
+            // the socket was not found
+          }
+
+ */
