@@ -20,7 +20,7 @@ export default function TextEditor() {
   useEffect(() => {
     //Setting a random name for the socket user connected
     const r = Math.floor(Math.random() * 10) + 1
-    const s_socket = io("https://7a06-156-204-250-237.eu.ngrok.io", { query: { username: `shehab ${r}` } })
+    const s_socket = io("http://localhost:3001", { query: { username: `shehab ${r}` } })
     setSocket(s_socket)
 
     return () => {

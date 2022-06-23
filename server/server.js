@@ -148,8 +148,11 @@ io.on("connection", (socket) => {
         })
 
         socket.on("save-document", async (data) => {
-            await Document.findByIdAndUpdate(documentID, { data })
-
+            try {
+                await Document.findByIdAndUpdate(documentID, { data })
+            } catch (e) {
+                console.log(e)
+            }
         })
         //TODO Group the last 3 minutes of changes into one 'commit'
         socket.on('commit-history', async (data) => {
@@ -163,9 +166,13 @@ io.on("connection", (socket) => {
 async function lookUpDocument(id) {
     if (id == null) return
 
-    const document = await Document.findById(id)
-    if (document) return document
-    return await Document.create({ _id: id, data: defaultValue })
+    try {
+        const document = await Document.findById(id)
+        if (document) return document
+        return await Document.create({ _id: id, data: defaultValue })
+    } catch (e) {
+        console.log(e)
+    }
 }
 
 
