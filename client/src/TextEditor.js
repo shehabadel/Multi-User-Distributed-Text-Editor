@@ -20,7 +20,7 @@ export default function TextEditor() {
   useEffect(() => {
     //Setting a random name for the socket user connected
     const r = Math.floor(Math.random() * 10) + 1
-    const s_socket = io("http://localhost:3001", { query: { username: `shehab ${r}` } })
+    const s_socket = io(process.env.REACT_APP_SERVER_URL, { query: { username: `shehab ${r}` } })
     setSocket(s_socket)
 
     return () => {
