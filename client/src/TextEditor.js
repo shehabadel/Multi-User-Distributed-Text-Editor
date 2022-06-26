@@ -12,7 +12,7 @@ export default function TextEditor() {
   const { id: id_doc } = useParams()
   const [newsocket, setSocket] = useState()
   const [quill, setQuill] = useState()
-  const [users, setUsers]=useState(0)
+  const [users, setUsers] = useState(1)
   console.log(id_doc)
 
 
@@ -29,10 +29,32 @@ export default function TextEditor() {
 
   }, [])
 
+  useEffect(() => {
+    if (newsocket == null || quill == null) return
+    newsocket.on('connect', () => {
+      newsocket.emit('get-document')
+      newsocket.emit('get-users')
+    })
+    return () => {
+      newsocket.off('connect', () => {
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (newsocket == null || quill == null) return
+    newsocket.on('users-no', (noOfSubs) => {
+      console.log(noOfSubs)
+    })
+    return () => {
+      newsocket.off('users-no', (noOfSubs) => {
+      })
+    }
+  }, [newsocket, quill])
 
   //UseEffect2
   useEffect(() => {
-    if (newsocket == null || quill == null) return    //check to make sure we have a socket adn a quill
+    if (newsocket == null || quill == null) return
 
     const socket_handler = delta => {
       quill.updateContents(delta)
@@ -70,7 +92,7 @@ export default function TextEditor() {
     })
 
     newsocket.emit("get-document", id_doc)
-    
+    newsocket.emit("get-users", id_doc)
   }, [newsocket, quill, id_doc])
 
   //useEffect5
@@ -86,6 +108,48 @@ export default function TextEditor() {
     }
   }, [newsocket, quill])
 
+  //Intervally check number of users
+  useEffect(() => {
+    if (newsocket == null || quill == null) return
+
+    const time_interval = setInterval(() => {
+      newsocket.emit('get-users')
+    }, interval_ms)
+
+    return () => {
+      clearInterval(time_interval)
+    }
+  }, [newsocket, quill])
+
+  //When client disconnects
+  useEffect(() => {
+    if (newsocket == null || quill == null) return
+
+    const empty_handler = (error) => {
+      quill.disable()
+      quill.setText(error)
+    }
+    newsocket.on("disconnect", (reason) => {
+      if (reason === "io server disconnect") {
+        // the disconnection was initiated by the server, you need to reconnect manually
+        empty_handler("Server is down, please try again later")
+        newsocket.connect();
+      }
+      else if (reason==='transport close'||reason==='io client disconnect')
+      {
+        empty_handler("Disconnected, Please retry again!") // false
+      }
+      else{
+        newsocket.connect()
+      }
+    });
+
+    return () => {
+      newsocket.off("disconnect", empty_handler)
+    }
+  }, [newsocket, quill])
+
+
   const wrapperReference = useCallback(wrapper => {
     if (wrapper == null) return
     wrapper.innerHTML = ""
@@ -97,7 +161,13 @@ export default function TextEditor() {
     setQuill(q_quill)
 
   }, [])
-  return <div className="container" ref={wrapperReference}></div>
+  
+  return(
+    <>
+    <div className="container" ref={wrapperReference}></div>
+    </>
+  )
+
 
 
 }
@@ -108,7 +178,7 @@ const ToolBarArea = [
   [{ font: [] }], //Default font used in quill
   [{ list: "ordered" }, { list: "bullet" }],
   ["bold", "italic", "underline"],
-  [{ color: ['#ffffff','orange'] }, { background: ['#ffffff'] }],
+  [{ color: ['#ffffff', 'orange'] }, { background: ['#ffffff'] }],
   [{ script: "sub" }, { script: "super" }],
   [{ align: [] }],
   ["image", "blockquote", "code-block"],

@@ -6,7 +6,6 @@ const { Server } = require('socket.io');
 const Document = require('./model/Document.model');
 
 const { createClient } = require('redis');
-const { createAdapter } = require('@socket.io/redis-adapter');
 
 //Connecting to the MongoDB database using 
 dbConnect()
@@ -57,12 +56,14 @@ var redisSub = []
 var pubClient = createClient({
     url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
 });
+
+var cacheClient=pubClient.duplicate()
 pubClient.on('ready', () => {
     console.log('Publisher connected to redis and ready to use')
 })
 pubClient.on('error', (err) => console.log('Publisher Client Error', err));
 
-Promise.all([pubClient.connect()]).then(() => {
+Promise.all([pubClient.connect(), cacheClient.connect()]).then(() => {
     redisPub.push(pubClient)
     console.log(`number of publishers is ${redisPub.length}`)
 })
@@ -91,6 +92,7 @@ io.on("connection", (socket) => {
     //and log it
     allClients.push(socket)
     var username = socket.handshake.query.username
+
     console.log(`A client is connected! ${username} - Number of sockets is: ${allClients.length}`)
 
 
@@ -108,15 +110,12 @@ io.on("connection", (socket) => {
         redisSub.splice(subI, 1)
         //Unsubscribe from all the channels
         await subClient.unsubscribe()
-        await subClient.quit()
+        await subClient.quit()        
     })
 
-    socket.on('get-users', async (documentID)=>{
-        try {
-            const noOfSubs = await subClient.P
-        } catch (error) {
-            console.log(error)
-        }
+    socket.on('get-users', async (documentID) => {
+        const noOfSubs= await cacheClient.pubSubNumSub(documentID)
+        io.to(documentID).emit(noOfSubs)
     })
     socket.on('get-document', async (documentID) => {
         try {
@@ -134,13 +133,16 @@ io.on("connection", (socket) => {
             console.error(error)
         }
         const document = await lookUpDocument(documentID);
-        //TODO subscribe the socket to redis channel using the documentID
+        //Join Socket Room and save socketID in Redis database in order
+        //To keep track of users in the room
         socket.join(documentID);
+        const noOfSubs= await cacheClient.pubSubNumSub(documentID)        
+        io.to(documentID).emit(noOfSubs)
+
         socket.emit("load-document", document.data); //on load/reload
         
         socket.on("send-changes", async (delta) => {
             //Change delta to string when publishing
-            //socket.to(documentID).emit("receive-changes", delta)
             try {
                 const message = {
                     'sender': socket.id,
@@ -153,7 +155,6 @@ io.on("connection", (socket) => {
                 console.error(error)
             }
         })
-
         socket.on("save-document", async (data) => {
             try {
                 await Document.findByIdAndUpdate(documentID, { data })
@@ -161,12 +162,6 @@ io.on("connection", (socket) => {
                 console.log(e)
             }
         })
-        //TODO Group the last 3 minutes of changes into one 'commit'
-        socket.on('commit-history', async (data) => {
-            //Add the commit history to the database based on current
-            //Date for example
-        })
-
     })
 })
 
