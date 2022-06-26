@@ -111,7 +111,13 @@ io.on("connection", (socket) => {
         await subClient.quit()
     })
 
-
+    socket.on('get-users', async (documentID)=>{
+        try {
+            const noOfSubs = await subClient.P
+        } catch (error) {
+            console.log(error)
+        }
+    })
     socket.on('get-document', async (documentID) => {
         try {
             //when receiving as a subscriber pare the data sent by the publisher to return to its form
@@ -131,6 +137,7 @@ io.on("connection", (socket) => {
         //TODO subscribe the socket to redis channel using the documentID
         socket.join(documentID);
         socket.emit("load-document", document.data); //on load/reload
+        
         socket.on("send-changes", async (delta) => {
             //Change delta to string when publishing
             //socket.to(documentID).emit("receive-changes", delta)

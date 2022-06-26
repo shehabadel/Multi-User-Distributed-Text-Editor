@@ -12,7 +12,7 @@ export default function TextEditor() {
   const { id: id_doc } = useParams()
   const [newsocket, setSocket] = useState()
   const [quill, setQuill] = useState()
-
+  const [users, setUsers]=useState(0)
   console.log(id_doc)
 
 
@@ -70,6 +70,7 @@ export default function TextEditor() {
     })
 
     newsocket.emit("get-document", id_doc)
+    
   }, [newsocket, quill, id_doc])
 
   //useEffect5
