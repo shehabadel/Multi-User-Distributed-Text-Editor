@@ -14,10 +14,23 @@ npm i
 cd client
 npm i
 ``` 
-## Deploying FrontEnd and BackEnd apps on heroku
+## Deploying Frontend and Backend apps on heroku
 
+1. Create an app for the client code
+2. Create an app for the server code
+3. Log into heroku cli
+4. Change directory to the `client` folder, and follow instructions in the `Deploy` tab.
+5. Change directory to the `server` folder, and follow instructions in the `Deploy` tab.
+6. Add the server app url in the config vars for the client code. for example,
+      ```
+      REACT_APP_SERVER : https://dist-ws2.herokuapp.com
+      ```
 
-
+6. For the server the following config vars
+- `DB_URL` -> MongoDB ReplicaSet
+- `REDIS_HOST` -> Redis lab host
+- `REDIS_PASSWORD` -> Redis lab password
+- `REDIS_PORT` -> Redis lab port number
 
 
 ## Installing requirements for database
