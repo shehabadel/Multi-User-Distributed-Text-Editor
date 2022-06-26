@@ -24,7 +24,7 @@ dbConnect()
 //The client code to our resources here.
 const io = new Server(process.env.PORT, {
     cors: {
-        origin: process.env.CLIENT_URL,
+        origin: "*",
         methods: ["GET", "POST"]
     }
 })
