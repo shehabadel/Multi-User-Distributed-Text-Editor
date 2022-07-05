@@ -1,4 +1,19 @@
 # Multi-User-Distributed-Text-Editor
+## Description
+
+The source code for Multi-User-Distributed-Text-Editor. It is a text editor that allows several users to collaborate together in reading, and modifying documents together in a real-time environment. Basically, it is a Google documents clone. The project was made for Distributed Systems (CSE354) course.
+
+## Stack used
+
+| Tech     | Usage                                                                                                                                                                            |
+|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| React.js | Implementing and writing the UI.                                                                                                                                                 |
+| Quill.js | Text-Editor component implementing Operational Transformation Algorithm needed for real-time collaboration.                                                                      |
+| SocketIO | Web socket Node.js library for writing web socket servers. the main  component in our system.                                                                                    |
+| Redis    | In-Memory Data store. We used it in implementing a Publish/Subscribe approach for achieving communication between web socket servers which successfully implemented scalability. |
+| MongoDB  | NoSQL Schemaless Database. We used it to store our data in it. Also, used MongoDB replicaSets to achieve Database Replication.                                                   |
+| Docker   | Container Engine that runs containers. We used it to run several MongoDB instances to connect them together using Replica Sets.                                                  |
+
 # Installing NodeJS
  Follow [Installation guide](https://nodejs.dev/learn/how-to-install-nodejs)
 ## Installing required NodeJS packages
@@ -14,7 +29,16 @@ npm i
 cd client
 npm i
 ``` 
-## Deploying Frontend and Backend apps on heroku
+## Connecting to Redis
+1. Create an account on [Redis Labs](https://app.redislabs.com/)
+2. Retrieve your database `port` number and your credentials.
+3. Add the following `.env` environmental variables in the `server` directory
+- `process.env.REDIS_PASSWORD` --> Your account authentication password
+- `process.env.REDIS_HOST` --> Your database host address
+- `process.env.REDIS_PORT` --> Your database port number
+
+
+## Deploying Frontend and Backend apps on Heroku
 
 1. Create an app for the client code
 2. Create an app for the server code
@@ -31,6 +55,7 @@ npm i
 - `REDIS_HOST` -> Redis lab host
 - `REDIS_PASSWORD` -> Redis lab password
 - `REDIS_PORT` -> Redis lab port number
+
 
 
 ## Installing requirements for database
