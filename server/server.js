@@ -45,11 +45,7 @@ const defaultValue = ""
 var allClients = [];
 var redisPub = []
 var redisSub = []
-/**
- *  host: 'redis-19032.c55.eu-central-1-1.ec2.cloud.redislabs.com',
-    port:19032,
-    auth:'kyhTF1zQ5VO2Xqj3Ruo62qHgZoMhFLOu'
- */
+
 
 //Initilizaed Publisher and Subscriber Redis Clients in order
 //To subscribe to a single channel so that all websockets servers
