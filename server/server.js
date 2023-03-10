@@ -110,7 +110,7 @@ io.on("connection", (socket) => {
 
     socket.on('get-document', async (documentID) => {
         try {
-            //when receiving as a subscriber pare the data sent by the publisher to return to its form
+            //when receiving as a subscriber parse the data sent by the publisher to return to its form
             await subClient.subscribe(documentID, (message) => {
                 const msg = JSON.parse(message)
                 console.log(msg.sender)
@@ -171,17 +171,3 @@ async function lookUpDocument(id) {
     }
 }
 
-
-/**
- *  try {
-            await io.of('/').adapter.remoteJoin(socket.id, documentID);
-            const sockets = await io.in(documentID).allSockets();
-            console.log(`sockets in ${documentID} are: `)
-            console.log(sockets)
-            const rooms = await io.of('/').adapter.allRooms();
-            console.log(`Rooms are : `)
-            console.log(rooms)
-          } catch (e) {
-            // the socket was not found
-          }
- */
